@@ -1,11 +1,12 @@
 # Video Transcript Generator
 
-Skrypt do automatycznego generowania transkrypcji z plików wideo przy użyciu OpenAI Whisper.
+Skrypt do automatycznego generowania transkrypcji z plików wideo przy użyciu OpenAI Whisper.  
+Opcjonalnie pobiera filmy z YouTube przy użyciu yt-dlp.
 
 ## Wymagania systemowe
 
 ```bash
-# FFmpeg (wymagany przez Whisper)
+# FFmpeg (wymagany przez Whisper i yt-dlp)
 # macOS
 brew install ffmpeg
 
@@ -21,8 +22,10 @@ pip install -r requirements.txt
 
 ## Użycie
 
+### Podstawowe użycie
+
 ```bash
-# Podstawowe użycie (model medium, język polski)
+# Transkrypcja plików wideo z folderu (model medium, język polski)
 python transcribe.py /ścieżka/do/folderu/z/video
 
 # Z wyborem modelu i języka
@@ -32,7 +35,38 @@ python transcribe.py /ścieżka/do/folderu --model large --language en
 python transcribe.py /ścieżka/do/video --output-dir /ścieżka/do/transkrypcji
 ```
 
-## Dostępne modele
+### Pobieranie z YouTube (bulk)
+
+Utwórz plik `bulk.urls.txt` w folderze docelowym z linkami do filmów (jeden na linię):
+
+```
+https://youtu.be/XXXXX
+https://www.youtube.com/watch?v=YYYYY
+# komentarze są ignorowane
+https://youtu.be/ZZZZZ
+```
+
+Następnie uruchom skrypt:
+
+```bash
+python transcribe.py /ścieżka/do/folderu
+```
+
+Skrypt automatycznie:
+1. Pobierze filmy z YouTube (jeśli `bulk.urls.txt` istnieje)
+2. Pominie pobieranie filmów, które mają już transkrypcję
+3. Wygeneruje transkrypcje dla wszystkich filmów bez transkrypcji
+
+### Opcje
+
+| Opcja | Domyślnie | Opis |
+|-------|-----------|------|
+| `--model` | `medium` | Model Whisper: tiny, base, small, medium, large |
+| `--language` | `pl` | Język audio |
+| `--output-dir` | folder źródłowy | Folder docelowy dla transkrypcji |
+| `--skip-download` | - | Pomiń pobieranie z YouTube |
+
+## Dostępne modele Whisper
 
 | Model  | Rozmiar | VRAM  | Jakość        |
 |--------|---------|-------|---------------|
@@ -55,3 +89,10 @@ video.mp4 → video.transcript.txt
 nagranie.mkv → nagranie.transcript.txt
 ```
 
+## Logika pomijania
+
+Skrypt inteligentnie pomija:
+- ⏭️ Pobieranie filmów z YouTube, które mają już transkrypcję
+- ⏭️ Transkrypcję filmów, które mają już plik `.transcript.txt`
+
+Dzięki temu można wielokrotnie uruchamiać skrypt bez ponownego przetwarzania.
