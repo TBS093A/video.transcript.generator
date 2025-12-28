@@ -1,18 +1,20 @@
 # Video Transcript Generator
 
-Skrypt do automatycznego generowania transkrypcji z plików wideo przy użyciu OpenAI Whisper.  
-Opcjonalnie pobiera filmy z YouTube przy użyciu yt-dlp.
+Skrypt do automatycznego generowania transkrypcji z plików wideo/audio przy użyciu OpenAI Whisper.  
+Opcjonalnie pobiera treści z YouTube przy użyciu yt-dlp.
 
 ## Wymagania systemowe
 
 ```bash
-# FFmpeg (wymagany przez Whisper i yt-dlp)
+# FFmpeg (opcjonalny, ale zalecany)
 # macOS
 brew install ffmpeg
 
 # Ubuntu/Debian
 sudo apt install ffmpeg
 ```
+
+> ⚠️ **Bez FFmpeg** skrypt automatycznie przełącza się na tryb audio-only (pobiera i przetwarza tylko pliki audio).
 
 ## Instalacja
 
@@ -35,28 +37,31 @@ video.transcript.generator/
 ├── transcribe.py       # Główny skrypt
 ├── requirements.txt    # Zależności Python
 ├── venv/               # Wirtualne środowisko Python (ignorowane przez git)
-└── videos/             # Workspace - miejsce na filmy i transkrypcje (ignorowane przez git)
+└── videos/             # Workspace - miejsce na media i transkrypcje (ignorowane przez git)
     ├── bulk.urls.txt   # Opcjonalny plik z linkami YouTube
     ├── subfolder/      # Podfoldery są obsługiwane (rekursywnie)
-    │   ├── video2.mp4
-    │   └── video2.transcript.txt
+    │   ├── audio.mp3
+    │   └── audio.transcript.txt
     ├── video1.mp4
     ├── video1.transcript.txt
     └── ...
 ```
 
-> 💡 **Tip:** Folder `videos/` to domyślny workspace skryptu - umieść tam pliki wideo lub `bulk.urls.txt` z linkami YouTube. Skrypt przeszukuje folder rekursywnie, więc możesz organizować filmy w podfolderach. Folder `venv/` zawiera wirtualne środowisko Python. Oba foldery są ignorowane przez git.
+> 💡 **Tip:** Folder `videos/` to domyślny workspace skryptu - umieść tam pliki wideo/audio lub `bulk.urls.txt` z linkami YouTube. Skrypt przeszukuje folder rekursywnie, więc możesz organizować pliki w podfolderach. Folder `venv/` zawiera wirtualne środowisko Python. Oba foldery są ignorowane przez git.
 
 ## Użycie
 
 ### Podstawowe użycie
 
 ```bash
-# Transkrypcja plików wideo z folderu videos/ (model medium, język polski)
+# Transkrypcja plików wideo/audio z folderu videos/ (model medium, język polski)
 python transcribe.py
 
 # Z wyborem modelu i języka
 python transcribe.py --model large --language en
+
+# Tryb audio-only (pobiera audio z YouTube, przetwarza tylko pliki audio)
+python transcribe.py --audio-only
 
 # Pomiń pobieranie z YouTube
 python transcribe.py --skip-download
@@ -65,7 +70,20 @@ python transcribe.py --skip-download
 Skrypt automatycznie:
 - Używa folderu `videos/` jako workspace (tworzy go jeśli nie istnieje)
 - Przeszukuje folder **rekursywnie** (włącznie z podfolderami)
-- Zapisuje transkrypcje **obok plików wideo** (w tej samej lokalizacji)
+- Zapisuje transkrypcje **obok plików media** (w tej samej lokalizacji)
+- **Wykrywa brak FFmpeg** i automatycznie przełącza się na tryb audio-only
+
+### Tryb audio-only
+
+Użyj flagi `--audio-only` aby:
+- Pobierać tylko audio z YouTube (mniejsze pliki, szybsze pobieranie)
+- Przetwarzać tylko pliki audio (ignoruje pliki wideo)
+
+```bash
+python transcribe.py --audio-only
+```
+
+> 💡 Tryb audio-only jest automatycznie włączany gdy FFmpeg nie jest zainstalowany.
 
 ### Pobieranie z YouTube (bulk)
 
@@ -85,9 +103,9 @@ python transcribe.py
 ```
 
 Skrypt automatycznie:
-1. Pobierze filmy z YouTube (jeśli `bulk.urls.txt` istnieje)
-2. Pominie pobieranie filmów, które mają już transkrypcję
-3. Wygeneruje transkrypcje dla wszystkich filmów bez transkrypcji
+1. Pobierze treści z YouTube (wideo lub audio w zależności od trybu)
+2. Pominie pobieranie plików, które mają już transkrypcję
+3. Wygeneruje transkrypcje dla wszystkich plików bez transkrypcji
 
 ### Opcje
 
@@ -95,6 +113,7 @@ Skrypt automatycznie:
 |-------|-----------|------|
 | `--model` | `medium` | Model Whisper: tiny, base, small, medium, large |
 | `--language` | `pl` | Język audio |
+| `--audio-only` | - | Używaj tylko plików audio |
 | `--skip-download` | - | Pomiń pobieranie z YouTube |
 
 ## Dostępne modele Whisper
@@ -109,21 +128,30 @@ Skrypt automatycznie:
 
 ## Obsługiwane formaty
 
-`.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.flv`, `.wmv`, `.m4v`, `.mpeg`, `.mpg`
+**Wideo:** `.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.flv`, `.wmv`, `.m4v`, `.mpeg`, `.mpg`
+
+**Audio:** `.mp3`, `.wav`, `.m4a`, `.flac`, `.ogg`, `.opus`, `.aac`, `.wma`
 
 ## Pliki wyjściowe
 
-Transkrypcje są zapisywane **obok plików wideo** z rozszerzeniem `.transcript.txt`:
+Transkrypcje są zapisywane **obok plików media** z rozszerzeniem `.transcript.txt`:
 
 ```
 videos/video.mp4 → videos/video.transcript.txt
+videos/podcast.mp3 → videos/podcast.transcript.txt
 videos/kurs/lekcja1.mkv → videos/kurs/lekcja1.transcript.txt
 ```
 
 ## Logika pomijania
 
 Skrypt inteligentnie pomija:
-- ⏭️ Pobieranie filmów z YouTube, które mają już transkrypcję
-- ⏭️ Transkrypcję filmów, które mają już plik `.transcript.txt`
+- ⏭️ Pobieranie treści z YouTube, które mają już transkrypcję
+- ⏭️ Transkrypcję plików, które mają już plik `.transcript.txt`
 
 Dzięki temu można wielokrotnie uruchamiać skrypt bez ponownego przetwarzania.
+
+## Wykrywanie FFmpeg
+
+Skrypt automatycznie sprawdza czy FFmpeg jest zainstalowany:
+- ✅ **FFmpeg znaleziony** → pełna funkcjonalność (wideo + audio)
+- ⚠️ **FFmpeg nie znaleziony** → automatyczny tryb audio-only
