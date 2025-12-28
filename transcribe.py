@@ -19,7 +19,7 @@ VIDEOS_DIR = Path(__file__).parent / "videos"
 
 # Obsługiwane rozszerzenia plików
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv', '.m4v', '.mpeg', '.mpg'}
-AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.flac', '.ogg', '.opus', '.aac', '.wma'}
+AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.flac', '.ogg', '.opus', '.aac', '.wma', '.webm'}
 ALL_MEDIA_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 
 # Nazwa pliku z linkami do YouTube
@@ -31,33 +31,38 @@ def check_ffmpeg() -> bool:
     return shutil.which('ffmpeg') is not None
 
 
-def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool = False) -> list[Path]:
-    """Pobiera treści z YouTube (wideo lub audio) i zwraca listę pobranych plików."""
-    downloaded_files = []
+def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool = False) -> None:
+    """Pobiera treści z YouTube (wideo lub audio). Używa archiwum do pomijania już pobranych."""
+    
+    # Szablon nazwy pliku:
+    # - Dla playlist: NazwaPlaylisty/001 - Tytuł.ext
+    # - Dla pojedynczych: Tytuł.ext
+    outtmpl = str(output_dir / '%(playlist_title&{}/|)s%(playlist_index&{:03d} - |)s%(title)s.%(ext)s')
+    
+    # Archiwum pobranych plików - zapobiega ponownemu pobieraniu
+    download_archive = str(output_dir / '.downloaded_archive.txt')
+    
+    common_opts = {
+        'outtmpl': outtmpl,
+        'quiet': False,
+        'no_warnings': False,
+        'download_archive': download_archive,
+        'ignoreerrors': True,  # Kontynuuj mimo błędów pojedynczych filmów
+    }
     
     if audio_only:
-        # Tryb audio - pobieraj audio i konwertuj do wav
+        # Tryb audio - pobieraj tylko audio w oryginalnym formacie (webm/m4a)
         opts = {
+            **common_opts,
             'format': 'bestaudio/best',
-            'outtmpl': str(output_dir / '%(title)s.%(ext)s'),
-            'quiet': False,
-            'no_warnings': False,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'wav',
-            }],
         }
-        extensions_to_check = AUDIO_EXTENSIONS
         file_type = "audio"
     else:
-        # Tryb video
+        # Tryb video - preferuj webm, fallback do best
         opts = {
-            'format': 'best',
-            'outtmpl': str(output_dir / '%(title)s.%(ext)s'),
-            'quiet': False,
-            'no_warnings': False,
+            **common_opts,
+            'format': 'bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best',
         }
-        extensions_to_check = VIDEO_EXTENSIONS
         file_type = "wideo"
     
     with YoutubeDL(opts) as ytdl:
@@ -68,49 +73,10 @@ def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool
                 
             print(f"\n[{i}/{len(urls)}] 📥 Pobieram ({file_type}): {url}")
             try:
-                # Pobierz info o filmie
-                info = ytdl.extract_info(url, download=False)
-                if info is None:
-                    print(f"  ❌ Nie można pobrać informacji o filmie: {url}")
-                    continue
-                    
-                title = info.get('title', 'video')
-                
-                # Sprawdź czy transkrypcja już istnieje
-                transcript_path = output_dir / f"{title}.transcript.txt"
-                if transcript_path.exists():
-                    print(f"  ⏭️  Pomijam pobieranie (transkrypcja już istnieje): {title}")
-                    continue
-                
-                # Sprawdź czy plik już istnieje (audio lub video)
-                existing_file = None
-                for ext in extensions_to_check:
-                    potential_path = output_dir / f"{title}{ext}"
-                    if potential_path.exists():
-                        existing_file = potential_path
-                        break
-                
-                if existing_file:
-                    print(f"  ⏭️  Plik już istnieje: {existing_file.name}")
-                    downloaded_files.append(existing_file)
-                    continue
-                
-                # Pobierz
+                # Pobierz (yt-dlp automatycznie pomija już pobrane dzięki download_archive)
                 ytdl.download([url])
-                
-                # Znajdź pobrany plik (nazwa może być sanitized)
-                for file_path in output_dir.iterdir():
-                    if file_path.is_file() and file_path.suffix.lower() in extensions_to_check:
-                        if title.lower() in file_path.stem.lower():
-                            if file_path not in downloaded_files:
-                                downloaded_files.append(file_path)
-                                print(f"  ✅ Pobrano: {file_path.name}")
-                                break
-                        
             except Exception as e:
                 print(f"  ❌ Błąd pobierania: {e}")
-    
-    return downloaded_files
 
 
 def load_bulk_urls(file_path: Path) -> list[str]:

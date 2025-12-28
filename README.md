@@ -64,12 +64,15 @@ video.transcript.generator/
 ├── requirements.txt    # Zależności Python
 ├── venv/               # Wirtualne środowisko Python (ignorowane przez git)
 └── videos/             # Workspace - miejsce na media i transkrypcje (ignorowane przez git)
-    ├── bulk.urls.txt   # Opcjonalny plik z linkami YouTube
-    ├── subfolder/      # Podfoldery są obsługiwane (rekursywnie)
-    │   ├── audio.mp3
-    │   └── audio.transcript.txt
-    ├── video1.mp4
-    ├── video1.transcript.txt
+    ├── bulk.urls.txt   # Opcjonalny plik z linkami YouTube/playlistami
+    ├── .downloaded_archive.txt  # Archiwum pobranych (automatyczne)
+    ├── Nazwa Playlisty/         # Subfolder dla playlisty
+    │   ├── 001 - Pierwszy film.webm
+    │   ├── 001 - Pierwszy film.transcript.txt
+    │   ├── 002 - Drugi film.webm
+    │   └── 002 - Drugi film.transcript.txt
+    ├── Pojedynczy film.webm
+    ├── Pojedynczy film.transcript.txt
     └── ...
 ```
 
@@ -97,13 +100,15 @@ Skrypt automatycznie:
 - Używa folderu `videos/` jako workspace (tworzy go jeśli nie istnieje)
 - Przeszukuje folder **rekursywnie** (włącznie z podfolderami)
 - Zapisuje transkrypcje **obok plików media** (w tej samej lokalizacji)
-- **Wykrywa brak FFmpeg** i automatycznie przełącza się na tryb audio-only
+- Tworzy **subfoldery dla playlist** z numerowanymi plikami
+- **Pomija już pobrane** filmy (archiwum pobierania)
 
 ### Tryb audio-only
 
 Użyj flagi `--audio-only` aby:
-- Pobierać tylko audio z YouTube w formacie WAV (mniejsze pliki, szybsze pobieranie)
+- Pobierać tylko audio z YouTube w oryginalnym formacie (webm/m4a - bez konwersji)
 - Przetwarzać tylko pliki audio (ignoruje pliki wideo)
+- Mniejsze pliki, szybsze pobieranie
 
 ```bash
 python transcribe.py --audio-only
@@ -111,13 +116,13 @@ python transcribe.py --audio-only
 
 ### Pobieranie z YouTube (bulk)
 
-Utwórz plik `videos/bulk.urls.txt` z linkami do filmów (jeden na linię):
+Utwórz plik `videos/bulk.urls.txt` z linkami do filmów lub playlist (jeden na linię):
 
 ```
 https://youtu.be/XXXXX
 https://www.youtube.com/watch?v=YYYYY
 # komentarze są ignorowane
-https://youtu.be/ZZZZZ
+https://www.youtube.com/playlist?list=PLxxxxxxxx
 ```
 
 Następnie uruchom skrypt:
@@ -125,6 +130,11 @@ Następnie uruchom skrypt:
 ```bash
 python transcribe.py
 ```
+
+**Obsługa playlist:**
+- Playlisty są pobierane do subfolderów (nazwa playlisty)
+- Pliki są numerowane według kolejności: `001 - Tytuł.webm`, `002 - Tytuł.webm`, ...
+- Już pobrane filmy są pomijane (archiwum w `.downloaded_archive.txt`)
 
 Skrypt automatycznie:
 1. Pobierze treści z YouTube (wideo lub audio w zależności od trybu)
