@@ -3,7 +3,7 @@
 Skrypt do generowania transkrypcji z plików wideo przy użyciu OpenAI Whisper.
 Opcjonalnie pobiera filmy z YouTube na podstawie pliku bulk.urls.txt.
 
-Użycie: python transcribe.py <ścieżka_do_folderu> [--model MODEL] [--language JĘZYK]
+Użycie: python transcribe.py [--model MODEL] [--language JĘZYK]
 """
 
 import argparse
@@ -12,6 +12,9 @@ from pathlib import Path
 
 import whisper
 from yt_dlp import YoutubeDL
+
+# Domyślny folder workspace
+VIDEOS_DIR = Path(__file__).parent / "videos"
 
 # Obsługiwane rozszerzenia plików wideo
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv', '.m4v', '.mpeg', '.mpg'}
@@ -99,20 +102,21 @@ def load_bulk_urls(file_path: Path) -> list[str]:
     return urls
 
 
-def get_video_files(folder_path: Path) -> list[Path]:
-    """Zwraca listę plików wideo w podanym folderze."""
+def get_video_files_recursive(folder_path: Path) -> list[Path]:
+    """Zwraca listę plików wideo rekursywnie w podanym folderze i podfolderach."""
     video_files = []
-    for file_path in folder_path.iterdir():
+    for file_path in folder_path.rglob('*'):
         if file_path.is_file() and file_path.suffix.lower() in VIDEO_EXTENSIONS:
             video_files.append(file_path)
     return sorted(video_files)
 
 
-def get_videos_without_transcript(video_files: list[Path], output_dir: Path) -> list[Path]:
-    """Zwraca tylko te pliki wideo, które nie mają jeszcze transkrypcji."""
+def get_videos_without_transcript(video_files: list[Path]) -> list[Path]:
+    """Zwraca tylko te pliki wideo, które nie mają jeszcze transkrypcji (obok pliku wideo)."""
     videos_to_process = []
     for video_path in video_files:
-        transcript_path = output_dir / f"{video_path.stem}.transcript.txt"
+        # Transkrypcja jest zapisywana obok pliku wideo
+        transcript_path = video_path.parent / f"{video_path.stem}.transcript.txt"
         if not transcript_path.exists():
             videos_to_process.append(video_path)
     return videos_to_process
@@ -137,22 +141,19 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Przykłady użycia:
-  python transcribe.py ./videos
-  python transcribe.py ./videos --model large --language en
-  python transcribe.py /path/to/videos --model small
+  python transcribe.py
+  python transcribe.py --model large --language en
+  python transcribe.py --skip-download
 
 Dostępne modele: tiny, base, small, medium, large
 
 Pobieranie z YouTube:
-  Utwórz plik bulk.urls.txt w folderze docelowym z linkami (jeden na linię):
+  Utwórz plik videos/bulk.urls.txt z linkami (jeden na linię):
     https://youtu.be/XXXXX
     https://www.youtube.com/watch?v=YYYYY
+
+Transkrypcje są zapisywane obok plików wideo (rekursywnie).
         """
-    )
-    parser.add_argument(
-        'folder',
-        type=str,
-        help='Ścieżka do folderu z plikami wideo (lub docelowego dla pobierania)'
     )
     parser.add_argument(
         '--model',
@@ -168,12 +169,6 @@ Pobieranie z YouTube:
         help='Język audio (domyślnie: pl - polski)'
     )
     parser.add_argument(
-        '--output-dir',
-        type=str,
-        default=None,
-        help='Folder docelowy dla transkrypcji (domyślnie: ten sam co źródłowy)'
-    )
-    parser.add_argument(
         '--skip-download',
         action='store_true',
         help='Pomiń pobieranie z YouTube (nawet jeśli bulk.urls.txt istnieje)'
@@ -181,47 +176,52 @@ Pobieranie z YouTube:
 
     args = parser.parse_args()
 
-    # Walidacja/tworzenie folderu źródłowego
-    folder_path = Path(args.folder).resolve()
-    if not folder_path.exists():
-        print(f"📁 Tworzę folder: {folder_path}")
-        folder_path.mkdir(parents=True, exist_ok=True)
-    if not folder_path.is_dir():
-        print(f"❌ Błąd: '{folder_path}' nie jest folderem.")
-        sys.exit(1)
+    # Sprawdź/utwórz folder videos/
+    if not VIDEOS_DIR.exists():
+        VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
+        print(f"📁 Utworzono folder workspace: {VIDEOS_DIR}")
+        print()
+        print("ℹ️  Folder videos/ jest pusty. Aby rozpocząć:")
+        print("   1. Umieść pliki wideo w folderze videos/")
+        print("   2. Lub utwórz plik videos/bulk.urls.txt z linkami YouTube")
+        print()
+        print("   Następnie uruchom skrypt ponownie: python transcribe.py")
+        sys.exit(0)
 
-    # Folder docelowy
-    output_dir = Path(args.output_dir).resolve() if args.output_dir else folder_path
-    output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"📂 Workspace: {VIDEOS_DIR}")
 
     # === KROK 1: Pobieranie z YouTube (opcjonalne) ===
-    bulk_urls_path = folder_path / BULK_URLS_FILE
+    bulk_urls_path = VIDEOS_DIR / BULK_URLS_FILE
     youtube_urls = load_bulk_urls(bulk_urls_path)
     
     if youtube_urls and not args.skip_download:
         print(f"🎬 Znaleziono plik {BULK_URLS_FILE} z {len(youtube_urls)} linkami")
         print("=" * 50)
-        download_youtube_videos(youtube_urls, folder_path)
+        download_youtube_videos(youtube_urls, VIDEOS_DIR)
         print("\n" + "=" * 50)
     elif youtube_urls and args.skip_download:
         print(f"⏭️  Pomijam pobieranie z YouTube (--skip-download)")
 
-    # === KROK 2: Znajdź pliki wideo do transkrypcji ===
-    all_video_files = get_video_files(folder_path)
-    video_files = get_videos_without_transcript(all_video_files, output_dir)
+    # === KROK 2: Znajdź pliki wideo rekursywnie ===
+    all_video_files = get_video_files_recursive(VIDEOS_DIR)
+    video_files = get_videos_without_transcript(all_video_files)
     
     skipped_count = len(all_video_files) - len(video_files)
     
     if not all_video_files:
-        print(f"⚠️  Brak plików wideo w folderze: {folder_path}")
+        print(f"⚠️  Brak plików wideo w folderze: {VIDEOS_DIR}")
         print(f"   Obsługiwane rozszerzenia: {', '.join(sorted(VIDEO_EXTENSIONS))}")
+        print()
+        print("ℹ️  Aby rozpocząć:")
+        print("   1. Umieść pliki wideo w folderze videos/ (lub podfolderach)")
+        print("   2. Lub utwórz plik videos/bulk.urls.txt z linkami YouTube")
         sys.exit(0)
     
     if not video_files:
         print(f"✅ Wszystkie pliki wideo ({len(all_video_files)}) mają już transkrypcje.")
         sys.exit(0)
 
-    print(f"\n🎬 Znaleziono {len(all_video_files)} plik(ów) wideo w: {folder_path}")
+    print(f"\n🎬 Znaleziono {len(all_video_files)} plik(ów) wideo (rekursywnie)")
     print(f"   📝 Do transkrypcji: {len(video_files)}")
     print(f"   ⏭️  Już z transkrypcją: {skipped_count}")
     
@@ -238,11 +238,12 @@ Pobieranie z YouTube:
     error_count = 0
 
     for i, video_path in enumerate(video_files, 1):
-        print(f"\n[{i}/{len(video_files)}] Przetwarzam: {video_path.name}")
+        # Pokaż relatywną ścieżkę do videos/
+        relative_path = video_path.relative_to(VIDEOS_DIR)
+        print(f"\n[{i}/{len(video_files)}] Przetwarzam: {relative_path}")
         
-        # Ścieżka do pliku wyjściowego
-        output_filename = video_path.stem + ".transcript.txt"
-        output_path = output_dir / output_filename
+        # Ścieżka do pliku wyjściowego (obok pliku wideo)
+        output_path = video_path.parent / f"{video_path.stem}.transcript.txt"
 
         try:
             transcript = transcribe_video(model, video_path, args.language)

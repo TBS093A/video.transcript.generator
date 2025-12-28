@@ -37,12 +37,15 @@ video.transcript.generator/
 ├── venv/               # Wirtualne środowisko Python (ignorowane przez git)
 └── videos/             # Workspace - miejsce na filmy i transkrypcje (ignorowane przez git)
     ├── bulk.urls.txt   # Opcjonalny plik z linkami YouTube
+    ├── subfolder/      # Podfoldery są obsługiwane (rekursywnie)
+    │   ├── video2.mp4
+    │   └── video2.transcript.txt
     ├── video1.mp4
     ├── video1.transcript.txt
     └── ...
 ```
 
-> 💡 **Tip:** Folder `videos/` to idealne miejsce workspace skryptu - umieść tam pliki wideo lub `bulk.urls.txt` z linkami YouTube. Folder `venv/` zawiera wirtualne środowisko Python. Oba foldery są ignorowane przez git.
+> 💡 **Tip:** Folder `videos/` to domyślny workspace skryptu - umieść tam pliki wideo lub `bulk.urls.txt` z linkami YouTube. Skrypt przeszukuje folder rekursywnie, więc możesz organizować filmy w podfolderach. Folder `venv/` zawiera wirtualne środowisko Python. Oba foldery są ignorowane przez git.
 
 ## Użycie
 
@@ -50,18 +53,23 @@ video.transcript.generator/
 
 ```bash
 # Transkrypcja plików wideo z folderu videos/ (model medium, język polski)
-python transcribe.py ./videos
+python transcribe.py
 
 # Z wyborem modelu i języka
-python transcribe.py ./videos --model large --language en
+python transcribe.py --model large --language en
 
-# Zapis transkrypcji do innego folderu
-python transcribe.py ./videos --output-dir /ścieżka/do/transkrypcji
+# Pomiń pobieranie z YouTube
+python transcribe.py --skip-download
 ```
+
+Skrypt automatycznie:
+- Używa folderu `videos/` jako workspace (tworzy go jeśli nie istnieje)
+- Przeszukuje folder **rekursywnie** (włącznie z podfolderami)
+- Zapisuje transkrypcje **obok plików wideo** (w tej samej lokalizacji)
 
 ### Pobieranie z YouTube (bulk)
 
-Utwórz plik `bulk.urls.txt` w folderze docelowym z linkami do filmów (jeden na linię):
+Utwórz plik `videos/bulk.urls.txt` z linkami do filmów (jeden na linię):
 
 ```
 https://youtu.be/XXXXX
@@ -73,7 +81,7 @@ https://youtu.be/ZZZZZ
 Następnie uruchom skrypt:
 
 ```bash
-python transcribe.py ./videos
+python transcribe.py
 ```
 
 Skrypt automatycznie:
@@ -87,7 +95,6 @@ Skrypt automatycznie:
 |-------|-----------|------|
 | `--model` | `medium` | Model Whisper: tiny, base, small, medium, large |
 | `--language` | `pl` | Język audio |
-| `--output-dir` | folder źródłowy | Folder docelowy dla transkrypcji |
 | `--skip-download` | - | Pomiń pobieranie z YouTube |
 
 ## Dostępne modele Whisper
@@ -106,11 +113,11 @@ Skrypt automatycznie:
 
 ## Pliki wyjściowe
 
-Transkrypcje są zapisywane z rozszerzeniem `.transcript.txt`:
+Transkrypcje są zapisywane **obok plików wideo** z rozszerzeniem `.transcript.txt`:
 
 ```
-video.mp4 → video.transcript.txt
-nagranie.mkv → nagranie.transcript.txt
+videos/video.mp4 → videos/video.transcript.txt
+videos/kurs/lekcja1.mkv → videos/kurs/lekcja1.transcript.txt
 ```
 
 ## Logika pomijania
