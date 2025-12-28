@@ -17,22 +17,46 @@ sudo apt install ffmpeg
 ## Instalacja
 
 ```bash
+# Utwórz wirtualne środowisko Python
+python3 -m venv venv
+
+# Aktywuj środowisko
+source venv/bin/activate  # Linux/macOS
+# lub: venv\Scripts\activate  # Windows
+
+# Zainstaluj zależności
 pip install -r requirements.txt
 ```
+
+## Struktura projektu
+
+```
+video.transcript.generator/
+├── transcribe.py       # Główny skrypt
+├── requirements.txt    # Zależności Python
+├── venv/               # Wirtualne środowisko Python (ignorowane przez git)
+└── videos/             # Workspace - miejsce na filmy i transkrypcje (ignorowane przez git)
+    ├── bulk.urls.txt   # Opcjonalny plik z linkami YouTube
+    ├── video1.mp4
+    ├── video1.transcript.txt
+    └── ...
+```
+
+> 💡 **Tip:** Folder `videos/` to idealne miejsce workspace skryptu - umieść tam pliki wideo lub `bulk.urls.txt` z linkami YouTube. Folder `venv/` zawiera wirtualne środowisko Python. Oba foldery są ignorowane przez git.
 
 ## Użycie
 
 ### Podstawowe użycie
 
 ```bash
-# Transkrypcja plików wideo z folderu (model medium, język polski)
-python transcribe.py /ścieżka/do/folderu/z/video
+# Transkrypcja plików wideo z folderu videos/ (model medium, język polski)
+python transcribe.py ./videos
 
 # Z wyborem modelu i języka
-python transcribe.py /ścieżka/do/folderu --model large --language en
+python transcribe.py ./videos --model large --language en
 
 # Zapis transkrypcji do innego folderu
-python transcribe.py /ścieżka/do/video --output-dir /ścieżka/do/transkrypcji
+python transcribe.py ./videos --output-dir /ścieżka/do/transkrypcji
 ```
 
 ### Pobieranie z YouTube (bulk)
@@ -49,7 +73,7 @@ https://youtu.be/ZZZZZ
 Następnie uruchom skrypt:
 
 ```bash
-python transcribe.py /ścieżka/do/folderu
+python transcribe.py ./videos
 ```
 
 Skrypt automatycznie:
