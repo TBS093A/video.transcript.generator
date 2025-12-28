@@ -36,7 +36,7 @@ def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool
     downloaded_files = []
     
     if audio_only:
-        # Tryb audio - pobieraj najlepsze audio i konwertuj do wav
+        # Tryb audio - pobieraj audio i konwertuj do wav
         opts = {
             'format': 'bestaudio/best',
             'outtmpl': str(output_dir / '%(title)s.%(ext)s'),
@@ -185,9 +185,10 @@ Pobieranie z YouTube:
 Transkrypcje są zapisywane obok plików media (rekursywnie).
 
 Tryb audio (--audio-only):
-  - Pobiera audio zamiast wideo z YouTube
+  - Pobiera audio zamiast wideo z YouTube (mniejsze pliki)
   - Przetwarza tylko pliki audio (.mp3, .wav, .m4a, itp.)
-  - Automatycznie włączany gdy brak ffmpeg
+
+Wymagania: FFmpeg musi być zainstalowany (używany przez Whisper)
         """
     )
     parser.add_argument(
@@ -216,22 +217,23 @@ Tryb audio (--audio-only):
 
     args = parser.parse_args()
 
-    # Sprawdź ffmpeg
-    ffmpeg_available = check_ffmpeg()
-    audio_only = args.audio_only
-    
-    if not ffmpeg_available:
-        print("⚠️  FFmpeg nie został znaleziony w systemie!")
-        print("   Przełączam na tryb audio-only (--audio-only)")
+    # Sprawdź ffmpeg - jest WYMAGANY przez Whisper
+    if not check_ffmpeg():
+        print("❌ FFmpeg nie został znaleziony w systemie!")
+        print()
+        print("   FFmpeg jest wymagany przez Whisper do przetwarzania plików audio/video.")
         print()
         print("   Aby zainstalować FFmpeg:")
         print("   • macOS: brew install ffmpeg")
         print("   • Ubuntu/Debian: sudo apt install ffmpeg")
+        print("   • Windows: choco install ffmpeg  lub  winget install ffmpeg")
         print()
-        audio_only = True
-    else:
-        print("✅ FFmpeg znaleziony")
+        print("   Po instalacji uruchom skrypt ponownie.")
+        sys.exit(1)
     
+    print("✅ FFmpeg znaleziony")
+    
+    audio_only = args.audio_only
     if audio_only:
         print("🎵 Tryb: audio-only")
         extensions_info = ', '.join(sorted(AUDIO_EXTENSIONS))

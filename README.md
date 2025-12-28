@@ -5,16 +5,42 @@ Opcjonalnie pobiera treści z YouTube przy użyciu yt-dlp.
 
 ## Wymagania systemowe
 
-```bash
-# FFmpeg (opcjonalny, ale zalecany)
-# macOS
-brew install ffmpeg
+FFmpeg jest **wymagany** - Whisper używa go do dekodowania plików audio/video. Skrypt nie uruchomi się bez FFmpeg.
 
-# Ubuntu/Debian
+### macOS (szybka instalacja - statyczny binary)
+
+```bash
+# Pobierz statyczny ffmpeg (~50MB, bez kompilacji)
+curl -L https://evermeet.cx/ffmpeg/ffmpeg-7.1.1.zip -o ffmpeg.zip
+curl -L https://evermeet.cx/ffmpeg/ffprobe-7.1.1.zip -o ffprobe.zip
+
+# Rozpakuj i zainstaluj
+unzip ffmpeg.zip && unzip ffprobe.zip
+sudo mv ffmpeg ffprobe /usr/local/bin/
+rm ffmpeg.zip ffprobe.zip
+
+# Sprawdź
+ffmpeg -version
+```
+
+### macOS (Homebrew - wolniejsza, pełna instalacja)
+
+```bash
+brew install ffmpeg
+```
+
+### Ubuntu/Debian
+
+```bash
 sudo apt install ffmpeg
 ```
 
-> ⚠️ **Bez FFmpeg** skrypt automatycznie przełącza się na tryb audio-only (pobiera i przetwarza tylko pliki audio).
+### Windows
+
+```bash
+choco install ffmpeg
+# lub: winget install ffmpeg
+```
 
 ## Instalacja
 
@@ -76,14 +102,12 @@ Skrypt automatycznie:
 ### Tryb audio-only
 
 Użyj flagi `--audio-only` aby:
-- Pobierać tylko audio z YouTube w formacie WAV (lepsza jakość dla transkrypcji)
+- Pobierać tylko audio z YouTube w formacie WAV (mniejsze pliki, szybsze pobieranie)
 - Przetwarzać tylko pliki audio (ignoruje pliki wideo)
 
 ```bash
 python transcribe.py --audio-only
 ```
-
-> 💡 Tryb audio-only jest automatycznie włączany gdy FFmpeg nie jest zainstalowany.
 
 ### Pobieranie z YouTube (bulk)
 
@@ -152,6 +176,8 @@ Dzięki temu można wielokrotnie uruchamiać skrypt bez ponownego przetwarzania.
 
 ## Wykrywanie FFmpeg
 
-Skrypt automatycznie sprawdza czy FFmpeg jest zainstalowany:
-- ✅ **FFmpeg znaleziony** → pełna funkcjonalność (wideo + audio)
-- ⚠️ **FFmpeg nie znaleziony** → automatyczny tryb audio-only
+Skrypt sprawdza czy FFmpeg jest zainstalowany przy starcie:
+- ✅ **FFmpeg znaleziony** → skrypt działa normalnie
+- ❌ **FFmpeg nie znaleziony** → skrypt wyświetla instrukcje instalacji i kończy działanie
+
+FFmpeg jest wymagany przez Whisper do dekodowania plików audio/video.
