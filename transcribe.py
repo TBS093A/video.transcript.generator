@@ -34,16 +34,17 @@ def check_ffmpeg() -> bool:
 def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool = False) -> None:
     """Pobiera treści z YouTube (wideo lub audio). Używa archiwum do pomijania już pobranych."""
     
-    # Szablon nazwy pliku:
-    # - Dla playlist: NazwaPlaylisty/001 - Tytuł.ext
-    # - Dla pojedynczych: Tytuł.ext
-    outtmpl = str(output_dir / '%(playlist_title&{}/|)s%(playlist_index&{:03d} - |)s%(title)s.%(ext)s')
-    
     # Archiwum pobranych plików - zapobiega ponownemu pobieraniu
     download_archive = str(output_dir / '.downloaded_archive.txt')
     
+    # Szablon nazwy pliku:
+    # - Dla playlist: NazwaPlaylisty/001 - Tytuł.ext
+    # - Dla pojedynczych: Tytuł.ext
     common_opts = {
-        'outtmpl': outtmpl,
+        'paths': {'home': str(output_dir)},
+        'outtmpl': {
+            'default': '%(playlist_title&{}/|)s%(playlist_index&{:03d} - |)s%(title)s.%(ext)s',
+        },
         'quiet': False,
         'no_warnings': False,
         'download_archive': download_archive,
