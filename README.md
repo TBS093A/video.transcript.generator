@@ -76,7 +76,7 @@ Skrypt automatycznie:
 ### Tryb audio-only
 
 Użyj flagi `--audio-only` aby:
-- Pobierać tylko audio z YouTube (mniejsze pliki, szybsze pobieranie)
+- Pobierać tylko audio z YouTube w formacie WAV (lepsza jakość dla transkrypcji)
 - Przetwarzać tylko pliki audio (ignoruje pliki wideo)
 
 ```bash

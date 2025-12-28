@@ -36,7 +36,7 @@ def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool
     downloaded_files = []
     
     if audio_only:
-        # Tryb audio - pobieraj najlepsze audio i konwertuj do mp3
+        # Tryb audio - pobieraj najlepsze audio i konwertuj do wav
         opts = {
             'format': 'bestaudio/best',
             'outtmpl': str(output_dir / '%(title)s.%(ext)s'),
@@ -44,10 +44,8 @@ def download_youtube_content(urls: list[str], output_dir: Path, audio_only: bool
             'no_warnings': False,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }] if check_ffmpeg() else [],
-            'extract_audio': True,
+                'preferredcodec': 'wav',
+            }],
         }
         extensions_to_check = AUDIO_EXTENSIONS
         file_type = "audio"
