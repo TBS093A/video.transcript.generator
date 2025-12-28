@@ -11,6 +11,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import torch
 import whisper
 from yt_dlp import YoutubeDL
 
@@ -24,6 +25,16 @@ ALL_MEDIA_EXTENSIONS = VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 
 # Nazwa pliku z linkami do YouTube
 BULK_URLS_FILE = "bulk.urls.txt"
+
+
+def get_device() -> str:
+    """Wykrywa najlepsze dostępne urządzenie do obliczeń (GPU/CPU)."""
+    if torch.cuda.is_available():
+        return "cuda"  # NVIDIA GPU
+    elif torch.backends.mps.is_available():
+        return "mps"   # Apple Silicon GPU (M1/M2/M3)
+    else:
+        return "cpu"
 
 
 def check_ffmpeg() -> bool:
@@ -263,10 +274,18 @@ Wymagania: FFmpeg musi być zainstalowany (używany przez Whisper)
     print(f"   📝 Do transkrypcji: {len(media_files)}")
     print(f"   ⏭️  Już z transkrypcją: {skipped_count}")
     
-    print(f"\n🤖 Ładuję model Whisper: {args.model}")
+    # Wykryj urządzenie GPU/CPU
+    device = get_device()
+    device_names = {
+        "cuda": "NVIDIA GPU (CUDA)",
+        "mps": "Apple Silicon GPU (MPS)",
+        "cpu": "CPU"
+    }
+    print(f"\n🖥️  Urządzenie: {device_names.get(device, device)}")
+    print(f"🤖 Ładuję model Whisper: {args.model}")
 
-    # Załaduj model
-    model = whisper.load_model(args.model)
+    # Załaduj model na wykryte urządzenie
+    model = whisper.load_model(args.model, device=device)
 
     print(f"🌐 Język: {args.language}")
     print("-" * 50)

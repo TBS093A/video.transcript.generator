@@ -29,13 +29,45 @@ ffmpeg -version
 brew install ffmpeg
 ```
 
-### Ubuntu/Debian
+### Linux (szybka instalacja - statyczny binary)
+
+```bash
+# Pobierz statyczny ffmpeg (~80MB, bez zależności)
+curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -o ffmpeg.tar.xz
+
+# Rozpakuj i zainstaluj
+tar xf ffmpeg.tar.xz
+sudo mv ffmpeg-*-static/ffmpeg ffmpeg-*-static/ffprobe /usr/local/bin/
+rm -rf ffmpeg.tar.xz ffmpeg-*-static
+
+# Sprawdź
+ffmpeg -version
+```
+
+### Ubuntu/Debian (apt)
 
 ```bash
 sudo apt install ffmpeg
 ```
 
-### Windows
+### Windows (szybka instalacja - statyczny binary)
+
+```powershell
+# Pobierz z gyan.dev (najpopularniejsze buildy dla Windows)
+# 1. Wejdź na: https://www.gyan.dev/ffmpeg/builds/
+# 2. Pobierz "ffmpeg-release-essentials.zip" (~80MB)
+# 3. Rozpakuj i dodaj folder bin/ do PATH
+
+# Lub przez PowerShell:
+Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile ffmpeg.zip
+Expand-Archive ffmpeg.zip -DestinationPath C:\ffmpeg
+# Dodaj C:\ffmpeg\ffmpeg-*-essentials_build\bin do zmiennej PATH
+
+# Sprawdź
+ffmpeg -version
+```
+
+### Windows (package manager)
 
 ```bash
 choco install ffmpeg
@@ -183,6 +215,22 @@ Skrypt inteligentnie pomija:
 - ⏭️ Transkrypcję plików, które mają już plik `.transcript.txt`
 
 Dzięki temu można wielokrotnie uruchamiać skrypt bez ponownego przetwarzania.
+
+## Akceleracja GPU
+
+Skrypt automatycznie wykrywa i używa najlepszego dostępnego urządzenia:
+
+| Urządzenie | Wykrywanie | Opis |
+|------------|------------|------|
+| **NVIDIA GPU** | `torch.cuda.is_available()` | Najszybsze dla kart NVIDIA (wymaga CUDA) |
+| **Apple Silicon** | `torch.backends.mps.is_available()` | GPU M1/M2/M3 (Metal Performance Shaders) |
+| **CPU** | fallback | Wolniejsze, ale zawsze działa |
+
+Przykładowy output:
+```
+🖥️  Urządzenie: Apple Silicon GPU (MPS)
+🤖 Ładuję model Whisper: medium
+```
 
 ## Wykrywanie FFmpeg
 
